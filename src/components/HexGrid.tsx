@@ -1,8 +1,13 @@
+
 import React from "react";
 import { useGameStore } from "../state/store";
 import { axialToPixel, hexPolygonPoints } from "../game/hex";
 
-export default function HexGrid() {
+type HexGridProps = {
+  onTileInfo?: (tileId: string) => void;
+};
+
+export default function HexGrid({ onTileInfo }: HexGridProps = {}) {
   const { tiles, cols, rows, selectedId, clickTile } = useGameStore();
 
   // Calculer le viewBox pour auto-fit
@@ -32,7 +37,17 @@ export default function HexGrid() {
           if (t.owner === 1) overlay = "rgba(74,168,255,0.45)";
           if (t.owner === 2) overlay = "rgba(255,111,177,0.45)";
           return (
-            <g key={t.id} onClick={() => clickTile(t.id)} style={{ cursor: "pointer" }}>
+            <g
+              key={t.id}
+              onClick={e => {
+                if (e.button === 0) clickTile(t.id);
+              }}
+              onContextMenu={e => {
+                e.preventDefault();
+                if (onTileInfo) onTileInfo(t.id);
+              }}
+              style={{ cursor: "pointer" }}
+            >
               <polygon
                 points={hexPolygonPoints(t.axial)}
                 fill={baseColor}

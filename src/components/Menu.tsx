@@ -3,7 +3,7 @@ import { useState } from "react";
 export type StartConfig = {
   cols: number;
   rows: number;
-  players: number[]; // P1 humain, le reste IA
+  players: number[];
   difficulty: "easy" | "normal" | "hard";
   terrainWeights: Record<"PLAINS"|"MOUNTAIN"|"DESERT", number>;
   mapSize?: "small"|"medium"|"large";
@@ -31,7 +31,6 @@ export default function Menu({ onStart }: { onStart: (cfg: StartConfig) => void 
     });
   };
 
-  // Dimensions selon la taille
   const sizePresets = {
     small: { cols: 11, rows: 9 },
     medium: { cols: 15, rows: 13 },
@@ -49,7 +48,6 @@ export default function Menu({ onStart }: { onStart: (cfg: StartConfig) => void 
 
   return (
     <div className="w-full flex flex-col items-center justify-center relative overflow-visible">
-      {/* Hex décoratifs */}
       <div className="pointer-events-none absolute inset-0 z-0">
         <span className="absolute left-[8%] top-[10%] w-40 h-32 opacity-10 bg-gradient-to-br from-blue-400 to-pink-400 rounded-[20%]" style={{clipPath:'polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%)'}}></span>
         <span className="absolute right-[10%] top-[18%] w-40 h-32 opacity-10 bg-gradient-to-br from-pink-400 to-blue-400 rounded-[20%]" style={{clipPath:'polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%)'}}></span>
@@ -75,7 +73,7 @@ export default function Menu({ onStart }: { onStart: (cfg: StartConfig) => void 
             className={`flex-1 min-w-0 py-2 rounded-lg font-semibold border border-blue-800 ${tab === "custom" ? "bg-blue-700 text-white" : "bg-white/10 text-gray-200"}`}
             onClick={() => setTab("custom")}
           >
-            Modo Solo (IA & Taille de carte)
+            Mode solo (vs IA)
           </button>
         </div>
         {tab === "ranked" ? (
@@ -121,7 +119,6 @@ export default function Menu({ onStart }: { onStart: (cfg: StartConfig) => void 
                   <option value="large">Grande (4 joueurs+)</option>
                 </select>
               </label>
-              {/* Colonnes/lignes désactivées, auto selon taille */}
             
             
               <label className="flex flex-col text-gray-200">
@@ -145,7 +142,6 @@ export default function Menu({ onStart }: { onStart: (cfg: StartConfig) => void 
             </div>
           </div>
         )}
-  {/* Leaderboard button moved to App.tsx */}
         <div className="text-right text-xs text-gray-400 mt-2">Astuce : taille moyenne (11×9) pour débuter.</div>
       </div>
     </div>

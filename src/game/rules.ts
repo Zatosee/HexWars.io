@@ -1,5 +1,5 @@
 export function canSelect(tile: Tile, player: PlayerID) {
-  return tile.owner === player && tile.power > 0;
+  return tile.owner === player && tile.power > 0 && !tile.hasActed;
 }
 import type { Tile, PlayerID, Terrain } from "../state/store";
 import { isNeighbor } from "./hex";
@@ -11,6 +11,13 @@ export function canAttack(from: Tile, to: Tile) {
 export function resolveAttack(from: Tile, to: Tile): { from: Tile; to: Tile } {
   let atk = from.power;
   let def = to.power;
+  // If moving to an owned tile (same owner), only move half the troops (rounded down)
+  if (from.owner && to.owner === from.owner) {
+    const move = Math.floor(from.power / 2);
+    const newFrom: Tile = { ...from, power: from.power - move };
+    const newTo: Tile = { ...to, power: Math.min(10, to.power + move) };
+    return { from: newFrom, to: newTo };
+  }
   // Apply resistance: mountain = x2, desert = x3
   let resistance = 1;
   if (to.terrain === "MOUNTAIN") resistance = 2;
@@ -50,8 +57,8 @@ export function endTurnGrowth(all: Tile[], player: PlayerID): Tile[] {
     if (!tile.owner) {
       // Neutral tile: increment by terrain
       grow = (growthTurn % growEvery === 0);
-    } else if (tile.owner === player) {
-      // Owned tile: increment by terrain
+    } else {
+      // All owned tiles increment by terrain
       grow = (growthTurn % growEvery === 0);
     }
     const newPower = grow ? Math.min(10, tile.power + 1) : tile.power;

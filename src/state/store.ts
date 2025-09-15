@@ -78,17 +78,57 @@ export const useGameStore = create<GameState & Actions>((set, get) => ({
       set({ selectedId: undefined });
       return;
     }
-    if (canAttack(from, target)) {
+    // If moving to another of your own tiles: move half the troops (rounded down)
+    if (from.owner === currentPlayer && target.owner === currentPlayer && from.id !== target.id) {
       if (from.hasActed) {
-        // Already acted this turn
         set({ selectedId: undefined });
         return;
       }
+      const move = Math.floor(from.power / 2);
+      if (move > 0) {
+        const newFrom = { ...from, power: from.power - move, hasActed: true };
+        const newTo = { ...target, power: Math.min(10, target.power + move) };
+        const newTiles: Tile[] = tiles.map(t => {
+          if (t.id === newFrom.id) return newFrom;
+          if (t.id === newTo.id) return newTo;
+          return t;
+        });
+        set({ tiles: newTiles, selectedId: undefined });
+      } else {
+        set({ selectedId: undefined });
+      }
+      return;
+    }
+    // Attack/capture logic
+    if (canAttack(from, target)) {
+      if (from.hasActed) {
+        set({ selectedId: undefined });
+        return;
+      }
+      // Special capture: if defender has less than half the attacker's power, only half the attacker's troops move, rest stay
+      if (target.owner !== currentPlayer && target.power < Math.floor(from.power / 2)) {
+        const move = Math.floor(from.power / 2);
+        const newFrom = { ...from, power: from.power - move, hasActed: true };
+        const newTo = { ...target, owner: currentPlayer, power: move, hasActed: true };
+        const newTiles: Tile[] = tiles.map(t => {
+          if (t.id === newFrom.id) return newFrom;
+          if (t.id === newTo.id) return newTo;
+          return t;
+        });
+        const winner = checkWinner(newTiles);
+        set({ tiles: newTiles, selectedId: undefined, winner });
+        return;
+      }
+      // Default attack/capture logic
       const { from: newFrom, to: newTo } = resolveAttack(from, target);
       newFrom.hasActed = true;
+      let newToFinal = { ...newTo };
+      if (newTo.owner === currentPlayer && newTo.id !== newFrom.id) {
+        newToFinal.hasActed = true;
+      }
       const newTiles: Tile[] = tiles.map(t => {
         if (t.id === newFrom.id) return newFrom;
-        if (t.id === newTo.id) return newTo;
+        if (t.id === newTo.id) return newToFinal;
         return t;
       });
       const winner = checkWinner(newTiles);

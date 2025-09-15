@@ -6,11 +6,19 @@ import Menu from "./components/Menu";
 import type { StartConfig } from "./components/Menu";
 import HexGrid from "./components/HexGrid";
 import TileHUD from "./components/TileHUD";
+import TurnTimer from "./components/TurnTimer";
 import { useGameStore } from "./state/store";
 
+
+
 export default function App() {
+  const [infoTileId, setInfoTileId] = useState<string|null>(null);
   const [screen, setScreen] = useState<"menu" | "game">("menu");
   const { initIfNeeded, currentPlayer, endTurn, reset, winner } = useGameStore();
+  const timerDurations = [60, 30, 15];
+  const [timerKey, setTimerKey] = useState(0); // force reset
+  const [missedTurns, setMissedTurns] = useState<{[k:number]:number}>({1:0,2:0,3:0,4:0});
+  const [playerTimerStage, setPlayerTimerStage] = useState<{[k:number]:number}>({1:0,2:0,3:0,4:0});
 
   const handleStart = (cfg: StartConfig) => {
     reset();
@@ -34,6 +42,20 @@ export default function App() {
 
   const [rulesOpen, setRulesOpen] = useState(false);
 
+
+  // Reset timer and missed count if player acts (endTurn called by button or action)
+  const handleEndTurn = React.useCallback(() => {
+    setPlayerTimerStage(stages => ({ ...stages, [currentPlayer]: 0 }));
+    setMissedTurns(mt => ({ ...mt, [currentPlayer]: 0 }));
+    setTimerKey(k => k + 1);
+    endTurn();
+  }, [currentPlayer, endTurn]);
+
+  // Reset timer on player change or game reset
+  React.useEffect(() => {
+    setTimerKey(k => k + 1);
+  }, [currentPlayer, screen]);
+
   if (screen === "menu")
     return (
       <div className="min-h-screen flex flex-col bg-[#181e3a] relative overflow-hidden">
@@ -48,7 +70,7 @@ export default function App() {
           {/* Header titre + version */}
           <header className="w-full flex flex-col items-center pt-2 pb-0">
             <h1 className="text-6xl font-extrabold tracking-widest text-white mb-2 drop-shadow-lg" style={{fontFamily:'Orbitron, sans-serif', letterSpacing:'0.15em'}}>Hexwars<span className="opacity-80 font-semibold">.io</span></h1>
-            <span className="text-xs text-blue-200 tracking-widest mb-4">v0.1.0</span>
+            <span className="text-xs text-blue-200 tracking-widest mb-4">v0.1.2</span>
           </header>
           {/* Bloc pseudo style OpenFront */}
           <div className="flex flex-row items-center justify-center w-full max-w-4xl mb-8">
@@ -102,7 +124,7 @@ export default function App() {
         </div>
         <div className="flex gap-2 items-center absolute right-8 top-4">
           <span className={`px-3 py-1 rounded-full font-bold bg-blue-700 text-white shadow-none`}>Joueur {currentPlayer}</span>
-          <button className="bg-white/10 px-3 py-1 rounded shadow-none border border-blue-800 hover:bg-blue-800/30 transition" onClick={endTurn}>Fin du tour</button>
+          <button className="bg-white/10 px-3 py-1 rounded shadow-none border border-blue-800 hover:bg-blue-800/30 transition" onClick={handleEndTurn}>Fin du tour</button>
           <button className="bg-red-700 px-3 py-1 rounded shadow-none border border-red-800 hover:bg-red-800/80 transition text-white font-bold" onClick={() => setScreen("menu")}>Quitter la partie</button>
         </div>
       </header>
@@ -110,15 +132,45 @@ export default function App() {
         <div className="text-center bg-green-700 text-white py-2 text-lg font-bold">🎉 Victoire du Joueur {winner} !</div>
       ) : null}
       <main className="flex-1 flex flex-col items-center justify-center">
-  <div className="flex flex-1 w-full max-w-full min-h-[70vh] rounded-b-2xl bg-[#20274a] p-6 m-0 relative">
-          <HexGrid />
+        <div className="flex flex-1 w-full max-w-full min-h-[70vh] rounded-b-2xl bg-[#20274a] p-6 m-0 relative">
+          <HexGrid onTileInfo={setInfoTileId} />
           {/* Sidebar stats joueur courant */}
           <aside className="hidden md:block w-80 ml-8">
             <PlayerStats />
           </aside>
-          <TileHUD />
+          {/* Show TileHUD for selected or right-clicked tile */}
+          <TileHUD tileId={infoTileId} onClose={() => setInfoTileId(null)} />
+          {/* Timer HUD bottom right */}
+          <div className="absolute bottom-6 right-6 z-20">
+            <TurnTimer
+              duration={timerDurations[playerTimerStage[currentPlayer] || 0]}
+              onExpire={() => {
+                setMissedTurns(mt => {
+                  const updated = { ...mt, [currentPlayer]: mt[currentPlayer] + 1 };
+                  if (updated[currentPlayer] >= 3) {
+                    alert("Défaite : vous n'avez pas joué pendant 3 tours !");
+                    reset();
+                    setScreen("menu");
+                    setPlayerTimerStage({1:0,2:0,3:0,4:0});
+                    return {1:0,2:0,3:0,4:0};
+                  } else {
+                    setPlayerTimerStage(stages => {
+                      const nextStage = Math.min(2, (stages[currentPlayer] || 0) + 1);
+                      return { ...stages, [currentPlayer]: nextStage };
+                    });
+                    setTimerKey(k => k + 1);
+                    endTurn();
+                  }
+                  return updated;
+                });
+              }}
+              currentPlayer={currentPlayer}
+              keyReset={timerKey}
+              hud
+            />
+          </div>
         </div>
-  {/* (Bloc règles supprimé, voir modal) */}
+        {/* (Bloc règles supprimé, voir modal) */}
       </main>
   <footer className="text-center text-xs text-gray-500 p-0"></footer>
     </div>
