@@ -1,7 +1,23 @@
 
+
 import { create } from "zustand";
 import { generateMap } from "../game/map";
 import { canSelect, canAttack, resolveAttack, checkWinner, endTurnGrowth } from "../game/rules";
+
+
+
+
+function nextPlayer(cur: PlayerID, order: PlayerID[]) {
+  const i = order.indexOf(cur);
+  return order[(i + 1) % order.length];
+}
+function durationFor(pid: PlayerID, strikes: Record<PlayerID, number>) {
+  const s = strikes[pid] ?? 0;
+  if (s >= 2) return 15;
+  if (s === 1) return 30;
+  return 60;
+}
+
 
 export type PlayerID = 1 | 2 | 3 | 4;
 export type Terrain = "PLAINS" | "MOUNTAIN" | "DESERT";
@@ -16,6 +32,7 @@ export type Tile = {
   city?: number;
   hasActed?: boolean; // true if this tile has acted this turn
 };
+
 export type GameState = {
   tiles: Tile[];
   cols: number;
@@ -23,15 +40,26 @@ export type GameState = {
   currentPlayer: PlayerID;
   selectedId?: string;
   winner?: PlayerID;
+  // Extended for AFK/turn logic:
+  players: PlayerID[];
+  strikes: Record<PlayerID, number>;
+  timerSeed: number;
+  turn: number;
+  gold: Record<PlayerID, number>;
 };
 
 const initial: GameState = {
   tiles: [],
   cols: 0,
   rows: 0,
+  players: [1,2],
   currentPlayer: 1,
+  turn: 1,
+  strikes: {1:0,2:0,3:0,4:0},
+  gold: {1:0,2:0,3:0,4:0},
   selectedId: undefined,
   winner: undefined,
+  timerSeed: 0,
 };
 
 type Actions = {
@@ -42,20 +70,28 @@ type Actions = {
   reset: () => void;
 };
 
-export const useGameStore = create<GameState & Actions>((set, get) => ({
+export const useGameStore = create<GameState & Actions & {
+  getDurationFor: (pid: PlayerID) => number;
+}>((set, get) => ({
   ...initial,
   initIfNeeded: (cfg) => {
     const s = get();
     if (s.tiles.length > 0) return;
     const tiles = generateMap(cfg);
-    // Ajout pop et city à chaque tuile si absent
-    const tilesWithEconomy = tiles.map(t => ({
-      ...t,
-      pop: t.pop ?? 0,
-      city: t.city ?? 0,
-      hasActed: false,
-    }));
-    set({ tiles: tilesWithEconomy, cols: cfg.cols, rows: cfg.rows });
+    const order: PlayerID[] = ("players" in cfg && (cfg as any).players?.length)
+      ? ((cfg as any).players as PlayerID[])
+      : [1,2];
+    set({
+      tiles,
+      cols: cfg.cols, rows: cfg.rows,
+      players: order,
+      currentPlayer: order[0],
+      turn: 1,
+      strikes: {1:0,2:0,3:0,4:0},
+      gold: {1:0,2:0,3:0,4:0},
+      winner: undefined, selectedId: undefined,
+      timerSeed: Math.random(),
+    });
   },
   select: (id: string) => {
     const { tiles, currentPlayer } = get();
@@ -141,14 +177,38 @@ export const useGameStore = create<GameState & Actions>((set, get) => ({
       }
     }
   },
-  endTurn: () => {
-    const { tiles, currentPlayer } = get();
-    // Reset hasActed for all tiles
-    const resetTiles = tiles.map(t => ({ ...t, hasActed: false }));
-    const grown = endTurnGrowth(resetTiles, currentPlayer);
-    const next = currentPlayer === 1 ? 2 : 1;
-    const winner = checkWinner(grown);
-    set({ tiles: grown, currentPlayer: next, selectedId: undefined, winner });
+  endTurn: (opts?: { afk?: boolean }) => {
+    const s = get();
+    if (s.winner) return;
+    const me = s.currentPlayer;
+    let strikes = { ...s.strikes };
+    // 1) AFK ? on ajoute un strike au joueur courant
+    if (opts?.afk) {
+      const cur = strikes[me] ?? 0;
+      strikes[me] = cur + 1;
+      // défaite si 3 strikes
+      if (strikes[me] >= 3) {
+        const other = s.players.find(p => p !== me) ?? me;
+        set({ strikes, winner: other });
+        return;
+      }
+    }
+    // 2) croissance + revenus pour le joueur qui termine son tour
+    const resetTiles = s.tiles.map(t => ({ ...t, hasActed: false }));
+    const grown = endTurnGrowth(resetTiles, me);
+    // (income optionnel, non utilisé ici)
+    // 3) passe au joueur suivant
+    const nxt = nextPlayer(me, s.players);
+    set({
+      tiles: grown,
+      strikes,
+      selectedId: undefined,
+      currentPlayer: nxt,
+      timerSeed: Math.random(),
+      turn: s.turn + (nxt === s.players[0] ? 1 : 0),
+    });
   },
-  reset: () => set({ ...initial }),
+  reset: () => set({ ...initial, timerSeed: Math.random() }),
+
+  getDurationFor: (pid: PlayerID) => durationFor(pid, get().strikes),
 }));
