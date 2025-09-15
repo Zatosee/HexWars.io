@@ -18,10 +18,11 @@ export function resolveAttack(from: Tile, to: Tile): { from: Tile; to: Tile } {
     const newTo: Tile = { ...to, power: Math.min(10, to.power + move) };
     return { from: newFrom, to: newTo };
   }
-  // Apply resistance: mountain = x2, desert = x3
+  // Apply resistance: mountain = x2, desert = x3, muraille = x2
   let resistance = 1;
   if (to.terrain === "MOUNTAIN") resistance = 2;
   if (to.terrain === "DESERT") resistance = 3;
+  if (to.city === 3) resistance *= 2; // muraille double la résistance
   const effectiveAtk = Math.max(1, Math.floor((atk - 1) / resistance) + 1); // always at least 1 used
   if (atk > def * resistance) {
     // Capture: attacker > defender * resistance
@@ -61,7 +62,13 @@ export function endTurnGrowth(all: Tile[], player: PlayerID): Tile[] {
       // All owned tiles increment by terrain
       grow = (growthTurn % growEvery === 0);
     }
-    const newPower = grow ? Math.min(10, tile.power + 1) : tile.power;
+    let newPower = tile.power;
+    if (grow) {
+      newPower = tile.power + 1;
+    }
+    // Cap at 10 unless building present
+    const cap = tile.city && tile.city > 0 ? Infinity : 10;
+    newPower = Math.min(cap, newPower);
     return { ...tile, power: newPower, growthTurn };
   });
 }

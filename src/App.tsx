@@ -45,7 +45,6 @@ export default function App() {
   }, [endTurn]);
 
   // Reset timer on player change or game reset
-  // plus besoin de timerKey local, timerSeed du store suffit
 
   if (screen === "menu")
     return (
@@ -121,8 +120,7 @@ export default function App() {
             disabled={false /* always enabled for currentPlayer, but you can add logic if needed */}
           >Fin du tour</button>
           <button className="bg-red-700 px-3 py-1 rounded shadow-none border border-red-800 hover:bg-red-800/80 transition text-white font-bold" onClick={() => {
-            setStrikes({1:0,2:0,3:0,4:0});
-            setTimerKey(k => k + 1);
+            reset();
             setScreen("menu");
           }}>Quitter la partie</button>
         </div>
@@ -133,17 +131,16 @@ export default function App() {
       <main className="flex-1 flex flex-col items-center justify-center">
         <div className="flex flex-1 w-full max-w-full min-h-[70vh] rounded-b-2xl bg-[#20274a] p-6 m-0 relative">
           <HexGrid onTileInfo={setInfoTileId} />
-          {/* Sidebar stats joueur courant */}
-          <aside className="hidden md:block w-80 ml-8">
+          {/* Sidebar stats + HUD en colonne */}
+          <div className="hidden md:flex flex-col w-80 ml-8">
             <PlayerStats />
-          </aside>
-          {/* Show TileHUD for selected or right-clicked tile */}
-          <TileHUD tileId={infoTileId} onClose={() => setInfoTileId(null)} />
+            <TileHUD tileId={infoTileId} onClose={() => setInfoTileId(null)} />
+          </div>
           {/* Timer HUD bottom right */}
           <div className="absolute bottom-6 right-6 z-20">
             <TurnTimer
               duration={[60,30,15][strikes[currentPlayer] || 0]}
-              onExpire={() => endTurn({ afk: true })}
+              onExpire={() => endTurn()}
               currentPlayer={currentPlayer}
               keyReset={timerSeed}
               hud

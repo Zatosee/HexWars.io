@@ -35,8 +35,34 @@ export default function HexGrid({ onTileInfo }: HexGridProps = {}) {
         {tiles.map((t) => {
           const baseColor = t.terrain === "PLAINS" ? "#7cc27a" : t.terrain === "MOUNTAIN" ? "#8f8fb2" : "#d9b56b";
           let overlay = "";
-          if (t.owner === 1) overlay = "rgba(74,168,255,0.45)";
-          if (t.owner === 2) overlay = "rgba(255,111,177,0.45)";
+          // Player colors: 1=blue, 2=red, 3=yellow, 4=green
+          if (t.owner === 1) overlay = "rgba(74,168,255,0.75)";    // blue
+          if (t.owner === 2) overlay = "rgba(255,70,70,0.75)";     // red
+          if (t.owner === 3) overlay = "rgba(255,221,51,0.75)";    // yellow
+          if (t.owner === 4) overlay = "rgba(80,220,120,0.75)";    // green
+          // Muraille: contour orange
+          const murailleStroke = t.city === 3 ? "#ff9900" : (selectedId === t.id ? "#fff" : "#0a0d1b");
+          const murailleStrokeWidth = t.city === 3 ? 4 : (selectedId === t.id ? 3 : 1.5);
+          // Icônes SVG
+          const center = axialToPixel(t.axial);
+          let icon = null;
+          if (t.city === 1) {
+            // Avion (aéroport)
+            icon = (
+              <svg x={center.x - 10} y={center.y - 10} width="20" height="20" viewBox="0 0 24 24">
+                <path d="M2 16l20-5-20-5v7l16 3-16 3z" fill="#fff"/>
+                <rect x="10" y="7" width="4" height="10" rx="2" fill="#60a5fa"/>
+              </svg>
+            );
+          } else if (t.city === 2 || t.city === 3) {
+            // Maison (hôtel ou muraille)
+            icon = (
+              <svg x={center.x - 10} y={center.y - 10} width="20" height="20" viewBox="0 0 24 24">
+                <rect x="4" y="10" width="16" height="8" rx="2" fill="#fff"/>
+                <polygon points="12,4 2,12 22,12" fill="#fbbf24"/>
+              </svg>
+            );
+          }
           return (
             <g
               key={t.id}
@@ -52,8 +78,8 @@ export default function HexGrid({ onTileInfo }: HexGridProps = {}) {
               <polygon
                 points={hexPolygonPoints(t.axial)}
                 fill={baseColor}
-                stroke={selectedId === t.id ? "#fff" : "#0a0d1b"}
-                strokeWidth={selectedId === t.id ? 3 : 1.5}
+                stroke={murailleStroke}
+                strokeWidth={murailleStrokeWidth}
                 className={selectedId === t.id ? "drop-shadow-lg" : ""}
               />
               {t.owner && (
@@ -63,7 +89,8 @@ export default function HexGrid({ onTileInfo }: HexGridProps = {}) {
                   stroke="none"
                 />
               )}
-              <text x={axialToPixel(t.axial).x} y={axialToPixel(t.axial).y + 2} className="text-xs font-bold fill-black" textAnchor="middle">{t.power}</text>
+              {icon}
+              <text x={center.x} y={center.y + 2} className="text-xs font-bold fill-black" textAnchor="middle">{t.power}</text>
             </g>
           );
         })}

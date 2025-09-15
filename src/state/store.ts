@@ -68,6 +68,7 @@ type Actions = {
   clickTile: (id: string) => void;
   endTurn: () => void;
   reset: () => void;
+  buildOnTile: (tileId: string, type: number) => void; // type: 1=aéroport, 2=hotel, 3=muraille
 };
 
 export const useGameStore = create<GameState & Actions & {
@@ -197,10 +198,22 @@ export const useGameStore = create<GameState & Actions & {
     }
     const resetTiles = s.tiles.map(t => ({ ...t, hasActed: false }));
     const grown = endTurnGrowth(resetTiles, me);
+    // Gold generation: 1 gold per owned tile, +1 per building (city > 0), for ALL players
+    let gold = { ...s.gold };
+    for (const pid of s.players) {
+      const ownedTiles = grown.filter(t => t.owner === pid);
+      let goldGain = 0;
+      for (const t of ownedTiles) {
+        goldGain += 1;
+        if (t.city && t.city > 0) goldGain += 1;
+      }
+      gold[pid] = (gold[pid] ?? 0) + goldGain;
+    }
     const nxt = nextPlayer(me, s.players);
     set({
       tiles: grown,
       strikes,
+      gold,
       selectedId: undefined,
       currentPlayer: nxt,
       timerSeed: Math.random(),
@@ -208,6 +221,23 @@ export const useGameStore = create<GameState & Actions & {
     });
   },
   reset: () => set({ ...initial, timerSeed: Math.random() }),
+
+  buildOnTile: (tileId: string, type: number) => {
+    const s = get();
+    const tile = s.tiles.find((t: Tile) => t.id === tileId);
+    if (!tile) return;
+    if (!tile.owner || tile.owner !== s.currentPlayer) return;
+    if (tile.city && tile.city > 0) return; // déjà un bâtiment
+    // prix : aéroport=50, hotel=50, muraille=25
+    const prices: Record<number, number> = {1: 50, 2: 50, 3: 25};
+    const price = prices[type] || 50;
+    if ((s.gold[s.currentPlayer] ?? 0) < price) return;
+    // payer
+    const newGold = {...s.gold, [s.currentPlayer]: s.gold[s.currentPlayer] - price};
+    // maj tuile
+    const newTiles = s.tiles.map((t: Tile) => t.id === tileId ? {...t, city: type} : t);
+    set({ tiles: newTiles, gold: newGold });
+  },
 
   getDurationFor: (pid: PlayerID) => durationFor(pid, get().strikes),
 }));
