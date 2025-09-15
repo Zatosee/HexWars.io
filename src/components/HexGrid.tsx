@@ -1,14 +1,15 @@
 
 import React from "react";
-import { useGameStore } from "../state/store";
 import { axialToPixel, hexPolygonPoints } from "../game/hex";
 
 type HexGridProps = {
   onTileInfo?: (tileId: string) => void;
 };
 
+import { useGameStore } from "../state/store";
+
 export default function HexGrid({ onTileInfo }: HexGridProps = {}) {
-  const { tiles, cols, rows, selectedId, clickTile } = useGameStore();
+  const { tiles, cols, rows, selectedId, clickTile, currentPlayer } = useGameStore();
 
   // Calculer le viewBox pour auto-fit
   const { minX, minY, width, height } = React.useMemo(() => {
@@ -40,7 +41,7 @@ export default function HexGrid({ onTileInfo }: HexGridProps = {}) {
             <g
               key={t.id}
               onClick={e => {
-                if (e.button === 0) clickTile(t.id);
+                if (e.button === 0 && t.owner === currentPlayer) clickTile(t.id);
               }}
               onContextMenu={e => {
                 e.preventDefault();

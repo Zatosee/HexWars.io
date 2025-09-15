@@ -17,11 +17,12 @@ export default function App() {
   const { initIfNeeded, currentPlayer, endTurn, reset, winner } = useGameStore();
   const timerDurations = [60, 30, 15];
   const [timerKey, setTimerKey] = useState(0); // force reset
-  const [missedTurns, setMissedTurns] = useState<{[k:number]:number}>({1:0,2:0,3:0,4:0});
-  const [playerTimerStage, setPlayerTimerStage] = useState<{[k:number]:number}>({1:0,2:0,3:0,4:0});
+  const [strikes, setStrikes] = useState<{[k:number]:number}>({1:0,2:0,3:0,4:0});
 
   const handleStart = (cfg: StartConfig) => {
     reset();
+    setStrikes({1:0,2:0,3:0,4:0});
+    setTimerKey(k => k + 1);
     initIfNeeded({
       cols: cfg.cols,
       rows: cfg.rows,
@@ -45,8 +46,7 @@ export default function App() {
 
   // Reset timer and missed count if player acts (endTurn called by button or action)
   const handleEndTurn = React.useCallback(() => {
-    setPlayerTimerStage(stages => ({ ...stages, [currentPlayer]: 0 }));
-    setMissedTurns(mt => ({ ...mt, [currentPlayer]: 0 }));
+    setStrikes(s => ({ ...s, [currentPlayer]: 0 }));
     setTimerKey(k => k + 1);
     endTurn();
   }, [currentPlayer, endTurn]);
@@ -124,8 +124,16 @@ export default function App() {
         </div>
         <div className="flex gap-2 items-center absolute right-8 top-4">
           <span className={`px-3 py-1 rounded-full font-bold bg-blue-700 text-white shadow-none`}>Joueur {currentPlayer}</span>
-          <button className="bg-white/10 px-3 py-1 rounded shadow-none border border-blue-800 hover:bg-blue-800/30 transition" onClick={handleEndTurn}>Fin du tour</button>
-          <button className="bg-red-700 px-3 py-1 rounded shadow-none border border-red-800 hover:bg-red-800/80 transition text-white font-bold" onClick={() => setScreen("menu")}>Quitter la partie</button>
+          <button
+            className="bg-white/10 px-3 py-1 rounded shadow-none border border-blue-800 hover:bg-blue-800/30 transition"
+            onClick={handleEndTurn}
+            disabled={false /* always enabled for currentPlayer, but you can add logic if needed */}
+          >Fin du tour</button>
+          <button className="bg-red-700 px-3 py-1 rounded shadow-none border border-red-800 hover:bg-red-800/80 transition text-white font-bold" onClick={() => {
+            setStrikes({1:0,2:0,3:0,4:0});
+            setTimerKey(k => k + 1);
+            setScreen("menu");
+          }}>Quitter la partie</button>
         </div>
       </header>
       {winner ? (
@@ -143,21 +151,16 @@ export default function App() {
           {/* Timer HUD bottom right */}
           <div className="absolute bottom-6 right-6 z-20">
             <TurnTimer
-              duration={timerDurations[playerTimerStage[currentPlayer] || 0]}
+              duration={timerDurations[strikes[currentPlayer] || 0]}
               onExpire={() => {
-                setMissedTurns(mt => {
-                  const updated = { ...mt, [currentPlayer]: mt[currentPlayer] + 1 };
+                setStrikes(s => {
+                  const updated = { ...s, [currentPlayer]: s[currentPlayer] + 1 };
                   if (updated[currentPlayer] >= 3) {
-                    alert("Défaite : vous n'avez pas joué pendant 3 tours !");
-                    reset();
-                    setScreen("menu");
-                    setPlayerTimerStage({1:0,2:0,3:0,4:0});
+                    // Set winner to the other player, show in-game victory message
+                    const winner = currentPlayer === 1 ? 2 : 1;
+                    useGameStore.setState({ winner });
                     return {1:0,2:0,3:0,4:0};
                   } else {
-                    setPlayerTimerStage(stages => {
-                      const nextStage = Math.min(2, (stages[currentPlayer] || 0) + 1);
-                      return { ...stages, [currentPlayer]: nextStage };
-                    });
                     setTimerKey(k => k + 1);
                     endTurn();
                   }
