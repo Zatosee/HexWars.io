@@ -14,15 +14,10 @@ import { useGameStore } from "./state/store";
 export default function App() {
   const [infoTileId, setInfoTileId] = useState<string|null>(null);
   const [screen, setScreen] = useState<"menu" | "game">("menu");
-  const { initIfNeeded, currentPlayer, endTurn, reset, winner } = useGameStore();
-  const timerDurations = [60, 30, 15];
-  const [timerKey, setTimerKey] = useState(0); // force reset
-  const [strikes, setStrikes] = useState<{[k:number]:number}>({1:0,2:0,3:0,4:0});
+  const { initIfNeeded, currentPlayer, endTurn, reset, winner, strikes, timerSeed } = useGameStore();
 
   const handleStart = (cfg: StartConfig) => {
     reset();
-    setStrikes({1:0,2:0,3:0,4:0});
-    setTimerKey(k => k + 1);
     initIfNeeded({
       cols: cfg.cols,
       rows: cfg.rows,
@@ -46,15 +41,11 @@ export default function App() {
 
   // Reset timer and missed count if player acts (endTurn called by button or action)
   const handleEndTurn = React.useCallback(() => {
-    setStrikes(s => ({ ...s, [currentPlayer]: 0 }));
-    setTimerKey(k => k + 1);
     endTurn();
-  }, [currentPlayer, endTurn]);
+  }, [endTurn]);
 
   // Reset timer on player change or game reset
-  React.useEffect(() => {
-    setTimerKey(k => k + 1);
-  }, [currentPlayer, screen]);
+  // plus besoin de timerKey local, timerSeed du store suffit
 
   if (screen === "menu")
     return (
@@ -151,24 +142,10 @@ export default function App() {
           {/* Timer HUD bottom right */}
           <div className="absolute bottom-6 right-6 z-20">
             <TurnTimer
-              duration={timerDurations[strikes[currentPlayer] || 0]}
-              onExpire={() => {
-                setStrikes(s => {
-                  const updated = { ...s, [currentPlayer]: s[currentPlayer] + 1 };
-                  if (updated[currentPlayer] >= 3) {
-                    // Set winner to the other player, show in-game victory message
-                    const winner = currentPlayer === 1 ? 2 : 1;
-                    useGameStore.setState({ winner });
-                    return {1:0,2:0,3:0,4:0};
-                  } else {
-                    setTimerKey(k => k + 1);
-                    endTurn();
-                  }
-                  return updated;
-                });
-              }}
+              duration={[60,30,15][strikes[currentPlayer] || 0]}
+              onExpire={() => endTurn({ afk: true })}
               currentPlayer={currentPlayer}
-              keyReset={timerKey}
+              keyReset={timerSeed}
               hud
             />
           </div>

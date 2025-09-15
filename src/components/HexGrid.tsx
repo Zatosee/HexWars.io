@@ -41,7 +41,7 @@ export default function HexGrid({ onTileInfo }: HexGridProps = {}) {
             <g
               key={t.id}
               onClick={e => {
-                if (e.button === 0 && t.owner === currentPlayer) clickTile(t.id);
+                if (e.button === 0) clickTile(t.id);
               }}
               onContextMenu={e => {
                 e.preventDefault();

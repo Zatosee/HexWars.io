@@ -182,22 +182,21 @@ export const useGameStore = create<GameState & Actions & {
     if (s.winner) return;
     const me = s.currentPlayer;
     let strikes = { ...s.strikes };
-    // 1) AFK ? on ajoute un strike au joueur courant
     if (opts?.afk) {
+      // AFK: on ajoute un strike
       const cur = strikes[me] ?? 0;
       strikes[me] = cur + 1;
-      // défaite si 3 strikes
       if (strikes[me] >= 3) {
         const other = s.players.find(p => p !== me) ?? me;
         set({ strikes, winner: other });
         return;
       }
+    } else {
+      // Si le joueur joue, on reset ses strikes
+      strikes[me] = 0;
     }
-    // 2) croissance + revenus pour le joueur qui termine son tour
     const resetTiles = s.tiles.map(t => ({ ...t, hasActed: false }));
     const grown = endTurnGrowth(resetTiles, me);
-    // (income optionnel, non utilisé ici)
-    // 3) passe au joueur suivant
     const nxt = nextPlayer(me, s.players);
     set({
       tiles: grown,
