@@ -85,7 +85,7 @@ export default function App() {
           <div className="flex flex-wrap gap-4 justify-center text-xs text-blue-200">
             <button onClick={()=>setRulesOpen(true)} className="hover:underline">Comment jouer</button>
             <a href="#" className="hover:underline">Wiki</a>
-            <span>@c HexWars™</span>
+            <span>©HexWars™</span>
             <a href="#" className="hover:underline">Conditions d'utilisation</a>
             <a href="#" className="hover:underline">Contact</a>
           </div>

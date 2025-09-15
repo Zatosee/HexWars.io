@@ -14,6 +14,7 @@ export type Tile = {
   power: number;
   pop?: number;
   city?: number;
+  hasActed?: boolean; // true if this tile has acted this turn
 };
 export type GameState = {
   tiles: Tile[];
@@ -52,6 +53,7 @@ export const useGameStore = create<GameState & Actions>((set, get) => ({
       ...t,
       pop: t.pop ?? 0,
       city: t.city ?? 0,
+      hasActed: false,
     }));
     set({ tiles: tilesWithEconomy, cols: cfg.cols, rows: cfg.rows });
   },
@@ -77,7 +79,13 @@ export const useGameStore = create<GameState & Actions>((set, get) => ({
       return;
     }
     if (canAttack(from, target)) {
+      if (from.hasActed) {
+        // Already acted this turn
+        set({ selectedId: undefined });
+        return;
+      }
       const { from: newFrom, to: newTo } = resolveAttack(from, target);
+      newFrom.hasActed = true;
       const newTiles: Tile[] = tiles.map(t => {
         if (t.id === newFrom.id) return newFrom;
         if (t.id === newTo.id) return newTo;
@@ -95,7 +103,9 @@ export const useGameStore = create<GameState & Actions>((set, get) => ({
   },
   endTurn: () => {
     const { tiles, currentPlayer } = get();
-    const grown = endTurnGrowth(tiles, currentPlayer);
+    // Reset hasActed for all tiles
+    const resetTiles = tiles.map(t => ({ ...t, hasActed: false }));
+    const grown = endTurnGrowth(resetTiles, currentPlayer);
     const next = currentPlayer === 1 ? 2 : 1;
     const winner = checkWinner(grown);
     set({ tiles: grown, currentPlayer: next, selectedId: undefined, winner });
