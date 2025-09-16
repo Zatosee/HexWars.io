@@ -38,20 +38,18 @@ export default function TurnTimer({
 
   if (!hud) return null;
 
+  // Affichage uniquement dans les 30 dernières secondes
+  const showBar = time <= 30;
+
   return (
-    <div className="flex flex-col items-end">
-      <div className="mb-1 px-3 py-1 rounded-lg bg-blue-900/90 border border-blue-700 text-white text-sm font-bold shadow-lg">
-        Tour du joueur {currentPlayer}
-      </div>
-      <div className="w-56 h-5 bg-blue-900 rounded-full overflow-hidden border border-blue-700 relative shadow-lg">
+    showBar && (
+      <div className="w-[340px] h-8 bg-gradient-to-r from-blue-900 via-indigo-700 to-blue-900 rounded-full overflow-hidden border-2 border-yellow-400 shadow-2xl relative flex items-center justify-center pointer-events-auto animate-pulse">
         <div
-          className="h-full bg-gradient-to-r from-yellow-400 to-orange-500 transition-all duration-500"
+          className="absolute left-0 top-0 h-full bg-gradient-to-r from-yellow-400 via-orange-400 to-orange-600 rounded-full transition-all duration-500 shadow-lg"
           style={{ width: `${(time / duration) * 100}%` }}
         />
-        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xs font-bold text-white drop-shadow">
-          {time}s
-        </span>
+        <span className="relative z-10 text-lg font-extrabold text-white drop-shadow-lg tracking-widest" style={{fontFamily:'Orbitron, sans-serif'}}>⏳ {time}s</span>
       </div>
-    </div>
+    )
   );
 }

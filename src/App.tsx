@@ -6,7 +6,6 @@ import Menu from "./components/Menu";
 import type { StartConfig } from "./components/Menu";
 import HexGrid from "./components/HexGrid";
 import TileHUD from "./components/TileHUD";
-import TurnTimer from "./components/TurnTimer";
 import { useGameStore } from "./state/store";
 
 
@@ -14,7 +13,7 @@ import { useGameStore } from "./state/store";
 export default function App() {
   const [infoTileId, setInfoTileId] = useState<string|null>(null);
   const [screen, setScreen] = useState<"menu" | "game">("menu");
-  const { initIfNeeded, currentPlayer, endTurn, reset, winner, strikes, timerSeed } = useGameStore();
+  const { initIfNeeded, currentPlayer, endTurn, reset, winner } = useGameStore();
 
   const handleStart = (cfg: StartConfig) => {
     reset();
@@ -29,12 +28,6 @@ export default function App() {
 
   // Pseudo state
   const [pseudo, setPseudo] = useState(() => localStorage.getItem("pseudo") || "Joueur");
-  const [editPseudo, setEditPseudo] = useState(false);
-  const handlePseudoChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    setEditPseudo(false);
-    localStorage.setItem("pseudo", pseudo);
-  };
 
   const [rulesOpen, setRulesOpen] = useState(false);
 
@@ -108,46 +101,51 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#181c2b]">
-  <header className="bg-gradient-to-b from-[#22337a] to-[#1a2240] text-white p-4 flex items-center justify-between border-b border-blue-900 shadow-[0_2px_12px_0_rgba(30,41,59,0.18)]">
-        <div className="flex-1 flex items-center">
-          <h1 className="text-2xl font-extrabold tracking-widest text-white drop-shadow-none ml-2" style={{fontFamily:'Orbitron, sans-serif', letterSpacing:'0.15em'}}>hexwars<span className="opacity-80 font-semibold">.io</span></h1>
-        </div>
-        <div className="flex gap-2 items-center absolute right-8 top-4">
-          <span className={`px-3 py-1 rounded-full font-bold bg-blue-700 text-white shadow-none`}>Joueur {currentPlayer}</span>
-          <button
-            className="bg-white/10 px-3 py-1 rounded shadow-none border border-blue-800 hover:bg-blue-800/30 transition"
-            onClick={handleEndTurn}
-            disabled={false /* always enabled for currentPlayer, but you can add logic if needed */}
-          >Fin du tour</button>
-          <button className="bg-red-700 px-3 py-1 rounded shadow-none border border-red-800 hover:bg-red-800/80 transition text-white font-bold" onClick={() => {
-            reset();
-            setScreen("menu");
-          }}>Quitter la partie</button>
-        </div>
-      </header>
+      {/* Indicateur couleur joueur en haut à gauche */}
+      <div className="absolute top-6 left-6 z-40 flex flex-col gap-2">
+        {[1,2,3,4].map(num => {
+          const colors = ["#4aa8ff","#ff4646","#ffdd33","#50dc78"];
+          return (
+            <div key={num} className="flex items-center gap-2">
+              <span style={{width:24,height:24,background:colors[num-1],borderRadius:6,display:'inline-block',border:'2px solid #fff'}}></span>
+              <span className="text-white font-bold text-base" style={{fontFamily:'Orbitron, sans-serif'}}>
+                Joueur {num}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+  {/* Header supprimé pour agrandir l'aire de jeu */}
       {winner ? (
         <div className="text-center bg-green-700 text-white py-2 text-lg font-bold">🎉 Victoire du Joueur {winner} !</div>
       ) : null}
       <main className="flex-1 flex flex-col items-center justify-center">
-        <div className="flex flex-1 w-full max-w-full min-h-[70vh] rounded-b-2xl bg-[#20274a] p-6 m-0 relative">
+        <div className="flex flex-1 w-full max-w-full min-h-[80vh] rounded-2xl bg-[#20274a] p-6 m-0 relative">
+          {/* Indication du tour du joueur en bas à gauche de l'aire de jeu, padding/margin ajusté */}
+          <div className="absolute bottom-10 left-8 z-30">
+            <span className="px-6 py-2 rounded-lg bg-blue-900/80 text-white text-base font-semibold shadow-lg border border-blue-700" style={{fontFamily:'Orbitron, sans-serif', letterSpacing:'0.05em'}}>
+              Tour du joueur {currentPlayer === 1 ? (pseudo || "Joueur 1") : "Joueur 2"}
+            </span>
+          </div>
           <HexGrid onTileInfo={setInfoTileId} />
           {/* Sidebar stats + HUD en colonne */}
           <div className="hidden md:flex flex-col w-80 ml-8">
             <PlayerStats />
             <TileHUD tileId={infoTileId} onClose={() => setInfoTileId(null)} />
           </div>
-          {/* Timer HUD bottom right */}
-          <div className="absolute bottom-6 right-6 z-20">
-            <TurnTimer
-              duration={[60,30,15][strikes[currentPlayer] || 0]}
-              onExpire={() => endTurn()}
-              currentPlayer={currentPlayer}
-              keyReset={timerSeed}
-              hud
-            />
+          {/* Boutons en bas à droite */}
+          <div className="absolute bottom-8 right-8 z-30 flex flex-col gap-3 items-end">
+            <button
+              className="bg-white/10 px-5 py-2 rounded-xl shadow border-2 border-blue-800 hover:bg-blue-800/30 transition text-white font-bold text-lg"
+              onClick={handleEndTurn}
+              disabled={false}
+            >Fin du tour</button>
+            <button className="bg-red-700 px-5 py-2 rounded-xl shadow border-2 border-red-800 hover:bg-red-800/80 transition text-white font-bold text-lg" onClick={() => {
+              reset();
+              setScreen("menu");
+            }}>Quitter la partie</button>
           </div>
         </div>
-        {/* (Bloc règles supprimé, voir modal) */}
       </main>
   <footer className="text-center text-xs text-gray-500 p-0"></footer>
     </div>

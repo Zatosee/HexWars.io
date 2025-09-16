@@ -11,12 +11,6 @@ function nextPlayer(cur: PlayerID, order: PlayerID[]) {
   const i = order.indexOf(cur);
   return order[(i + 1) % order.length];
 }
-function durationFor(pid: PlayerID, strikes: Record<PlayerID, number>) {
-  const s = strikes[pid] ?? 0;
-  if (s >= 2) return 15;
-  if (s === 1) return 30;
-  return 60;
-}
 
 
 export type PlayerID = 1 | 2 | 3 | 4;
@@ -40,12 +34,11 @@ export type GameState = {
   currentPlayer: PlayerID;
   selectedId?: string;
   winner?: PlayerID;
-  // Extended for AFK/turn logic:
   players: PlayerID[];
-  strikes: Record<PlayerID, number>;
-  timerSeed: number;
   turn: number;
   gold: Record<PlayerID, number>;
+  playerColors: Record<PlayerID, string>;
+  playerColorsLight: Record<PlayerID, string>;
 };
 
 const initial: GameState = {
@@ -55,11 +48,11 @@ const initial: GameState = {
   players: [1,2],
   currentPlayer: 1,
   turn: 1,
-  strikes: {1:0,2:0,3:0,4:0},
   gold: {1:0,2:0,3:0,4:0},
   selectedId: undefined,
   winner: undefined,
-  timerSeed: 0,
+  playerColors: {1:'#4aa8ff',2:'#ff4646',3:'#ffdd33',4:'#50dc78'},
+  playerColorsLight: {1:'#a3d8ff',2:'#ffb3b3',3:'#fff7b3',4:'#a3ffd8'},
 };
 
 type Actions = {
@@ -71,9 +64,7 @@ type Actions = {
   buildOnTile: (tileId: string, type: number) => void; // type: 1=aéroport, 2=hotel, 3=muraille
 };
 
-export const useGameStore = create<GameState & Actions & {
-  getDurationFor: (pid: PlayerID) => number;
-}>((set, get) => ({
+export const useGameStore = create<GameState & Actions>((set, get) => ({
   ...initial,
   initIfNeeded: (cfg) => {
     const s = get();
@@ -82,16 +73,41 @@ export const useGameStore = create<GameState & Actions & {
     const order: PlayerID[] = ("players" in cfg && (cfg as any).players?.length)
       ? ((cfg as any).players as PlayerID[])
       : [1,2];
+    // Génération dynamique des couleurs
+    function randomColor() {
+      // HSL: luminosité > 55%, saturation < 80%, évite noir/violet
+      const hue = Math.floor(Math.random()*360);
+      const sat = 60 + Math.floor(Math.random()*20);
+      const lum = 55 + Math.floor(Math.random()*25);
+      return `hsl(${hue},${sat}%,${lum}%)`;
+    }
+    function lightenColor(hsl:string) {
+      // hsl(x,y%,z%) => hsl(x,y%,z+25%)
+      const m = hsl.match(/hsl\((\d+),(\d+)%?,(\d+)%?\)/);
+      if (!m) return hsl;
+      const [h,s,l] = [m[1],m[2],m[3]];
+      return `hsl(${h},${s}%,${Math.min(95,parseInt(l)+25)}%)`;
+    }
+    const playerColors: Record<PlayerID,string> = {};
+    const playerColorsLight: Record<PlayerID,string> = {};
+    order.forEach(pid => {
+      let col = randomColor();
+      // Si trop sombre, recommence
+      let lum = parseInt(col.match(/(\d+)%\)$/)?.[1]||'60');
+      while (lum < 50) { col = randomColor(); lum = parseInt(col.match(/(\d+)%\)$/)?.[1]||'60'); }
+      playerColors[pid] = col;
+      playerColorsLight[pid] = lightenColor(col);
+    });
     set({
       tiles,
       cols: cfg.cols, rows: cfg.rows,
       players: order,
       currentPlayer: order[0],
       turn: 1,
-      strikes: {1:0,2:0,3:0,4:0},
       gold: {1:0,2:0,3:0,4:0},
       winner: undefined, selectedId: undefined,
-      timerSeed: Math.random(),
+      playerColors,
+      playerColorsLight,
     });
   },
   select: (id: string) => {
@@ -178,24 +194,10 @@ export const useGameStore = create<GameState & Actions & {
       }
     }
   },
-  endTurn: (opts?: { afk?: boolean }) => {
+  endTurn: () => {
     const s = get();
     if (s.winner) return;
     const me = s.currentPlayer;
-    let strikes = { ...s.strikes };
-    if (opts?.afk) {
-      // AFK: on ajoute un strike
-      const cur = strikes[me] ?? 0;
-      strikes[me] = cur + 1;
-      if (strikes[me] >= 3) {
-        const other = s.players.find(p => p !== me) ?? me;
-        set({ strikes, winner: other });
-        return;
-      }
-    } else {
-      // Si le joueur joue, on reset ses strikes
-      strikes[me] = 0;
-    }
     const resetTiles = s.tiles.map(t => ({ ...t, hasActed: false }));
     const grown = endTurnGrowth(resetTiles, me);
     // Gold generation: 1 gold per owned tile, +1 per building (city > 0), for ALL players
@@ -212,15 +214,13 @@ export const useGameStore = create<GameState & Actions & {
     const nxt = nextPlayer(me, s.players);
     set({
       tiles: grown,
-      strikes,
       gold,
       selectedId: undefined,
       currentPlayer: nxt,
-      timerSeed: Math.random(),
       turn: s.turn + (nxt === s.players[0] ? 1 : 0),
     });
   },
-  reset: () => set({ ...initial, timerSeed: Math.random() }),
+  reset: () => set({ ...initial }),
 
   buildOnTile: (tileId: string, type: number) => {
     const s = get();
@@ -239,5 +239,4 @@ export const useGameStore = create<GameState & Actions & {
     set({ tiles: newTiles, gold: newGold });
   },
 
-  getDurationFor: (pid: PlayerID) => durationFor(pid, get().strikes),
 }));
