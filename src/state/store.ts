@@ -88,8 +88,8 @@ export const useGameStore = create<GameState & Actions>((set, get) => ({
       const [h,s,l] = [m[1],m[2],m[3]];
       return `hsl(${h},${s}%,${Math.min(95,parseInt(l)+25)}%)`;
     }
-    const playerColors: Record<PlayerID,string> = {};
-    const playerColorsLight: Record<PlayerID,string> = {};
+    const playerColors: Record<PlayerID,string> = {1:'#4aa8ff',2:'#ff4646',3:'#ffdd33',4:'#50dc78'};
+    const playerColorsLight: Record<PlayerID,string> = {1:'#a3d8ff',2:'#ffb3b3',3:'#fff7b3',4:'#a3ffd8'};
     order.forEach(pid => {
       let col = randomColor();
       // Si trop sombre, recommence

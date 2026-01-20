@@ -1,7 +1,5 @@
 
-import React from "react";
 import { useGameStore } from "../state/store";
-import type { Tile } from "../state/store";
 
 type TileHUDProps = {
   tileId: string|null;

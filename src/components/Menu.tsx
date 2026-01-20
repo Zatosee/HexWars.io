@@ -16,8 +16,6 @@ const DEFAULT_TERRAIN: StartConfig["terrainWeights"] = {
 export default function Menu({ onStart }: { onStart: (cfg: StartConfig) => void }) {
   const [tab, setTab] = useState<"quick"|"custom"|"ranked">("quick");
   const [mapSize, setMapSize] = useState<"small"|"medium"|"large">("small");
-  const [cols, setCols] = useState(11);
-  const [rows, setRows] = useState(9);
   const [bots, setBots] = useState(1); // 0..3
   const [difficulty, setDifficulty] = useState<"easy"|"normal"|"hard">("normal");
 
@@ -136,7 +134,7 @@ export default function Menu({ onStart }: { onStart: (cfg: StartConfig) => void 
             </div>
             <div className="flex gap-2 mt-2">
               <button className="flex-1 py-2 rounded-lg bg-white/10 text-gray-200 border border-blue-800" onClick={()=>{
-                setCols(11); setRows(9); setBots(1); setDifficulty("normal");
+                setMapSize("small"); setBots(1); setDifficulty("normal");
               }}>Par défaut</button>
               <button className="flex-1 py-2 rounded-lg bg-blue-600 text-white font-bold border border-blue-800" onClick={startCustom}>Lancer</button>
             </div>

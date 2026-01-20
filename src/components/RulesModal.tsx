@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function RulesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
   return (

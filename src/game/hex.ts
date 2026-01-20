@@ -1,4 +1,4 @@
-import type { Axial, Terrain, Tile, PlayerID } from "../state/store";
+import type { Axial } from "../state/store";
 
 export function axialToPixel(a: Axial, size = 26) {
   const x = size * Math.sqrt(3) * (a.q + a.r / 2);

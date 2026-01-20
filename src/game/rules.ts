@@ -1,8 +1,9 @@
+import type { Tile, PlayerID } from "../state/store";
+import { isNeighbor } from "./hex";
+
 export function canSelect(tile: Tile, player: PlayerID) {
   return tile.owner === player && tile.power > 0 && !tile.hasActed;
 }
-import type { Tile, PlayerID, Terrain } from "../state/store";
-import { isNeighbor } from "./hex";
 
 export function canAttack(from: Tile, to: Tile) {
   return from.owner !== undefined && to.owner !== from.owner && isNeighbor(from.axial, to.axial) && from.power > 0;
@@ -45,7 +46,7 @@ export function checkWinner(tiles: Tile[]): PlayerID | undefined {
   return undefined;
 }
 
-export function endTurnGrowth(all: Tile[], player: PlayerID): Tile[] {
+export function endTurnGrowth(all: Tile[], _player: PlayerID): Tile[] {
   // Each tile needs a turn counter for growth
   return all.map(tile => {
     // Add or increment growthTurn property

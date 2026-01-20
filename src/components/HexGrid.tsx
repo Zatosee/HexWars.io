@@ -1,12 +1,16 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { axialToPixel, hexPolygonPoints } from "../game/hex";
 import { canSelect } from "../game/rules";
 
 import { useGameStore } from "../state/store";
 
-export default function HexGrid() {
-  const { tiles, currentPlayer, turn, select, clickTile, selectedId } = useGameStore();
+type HexGridProps = {
+  onTileInfo?: (tileId: string | null) => void;
+};
+
+export default function HexGrid({ onTileInfo: _onTileInfo }: HexGridProps) {
+  const { tiles, currentPlayer, select, clickTile, selectedId } = useGameStore();
 
   // Calculer le viewBox pour auto-fit
   const { minX, minY, width, height } = React.useMemo(() => {
